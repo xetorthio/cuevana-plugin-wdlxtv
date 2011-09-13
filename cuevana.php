@@ -3,15 +3,19 @@
 			parse_str($prmQuery, $queryData);
 			$items = array();
 			if(isset($queryData['episode']) && $queryData['episode']!="")
-				watchEpisode($items, $queryData['episode']);
+				watch($items, $queryData['episode'], "s");
 			else if(isset($queryData['season']) && $queryData['season']!="")
 				showSerieSeasonEpisodes($items, $queryData['season']);
 			else if(isset($queryData['serie']) && $queryData['serie']!="")
 				showSerieSeasons($items, $queryData['serie']);
-			else if($queryData['type']=='series')
+			else if(isset($queryData['type']) && $queryData['type']=='series')
 				showSeriesMenu($items);
-			else if($queryData['type']=='movies')
-				showMoviesMenu();
+			else if(isset($queryData['type']) && $queryData['type']=='peliculas')
+				showMoviesMenu($items, 1);
+			else if(isset($queryData['page']) && $queryData['page']!="")
+				showMoviesMenu($items, $queryData['page']);
+			else if(isset($queryData['movie']) && $queryData['movie']!="")
+				watch($items, $queryData['movie'], "");
 			else {
 				// show type menu
 				$items[] = array(
@@ -75,17 +79,17 @@
 
     }
 
-    function watchEpisode(&$items, $episode) {
-	preg_match("/goSource\('(.*)','megaupload'\);/",file_get_contents("http://www.cuevana.tv/player/source?id=$episode&subs=,ES&onstart=yes&tipo=s&sub_pre=ES"),$episode_info);
+    function watch(&$items, $id, $tipo) {
+	preg_match("/goSource\('(.*)','megaupload'\);/",file_get_contents("http://www.cuevana.tv/player/source?id=$id&subs=,ES&onstart=yes&tipo=$tipo&sub_pre=ES"),$info);
 	
-	$res = http_post("http://www.cuevana.tv/player/source_get", array("key"=>$episode_info[1], "host"=>"megaupload", "id"=>$episode, "subs"=>",ES", "tipo"=>"s&sub_pre=ES"));
+	$res = http_post("http://www.cuevana.tv/player/source_get", array("key"=>$info[1], "host"=>"megaupload", "id"=>$id, "subs"=>",ES", "tipo"=>"s&sub_pre=ES"));
 
-	preg_match("/downloadlink.*href=\"(.*)\"/U",file_get_contents(substr($res["content"],3)),$episode_stream);
+	preg_match("/downloadlink.*href=\"(.*)\"/U",file_get_contents(substr($res["content"],3)),$stream);
 
 	$items[] = array (
-		'id'           => 'umsp://plugins/cuevana?episode=$episode',
-		'dc:title'     => 'watch episode',
-		'res'          => $episode_stream[1],
+		'id'           => 'umsp://plugins/cuevana?watch=$id',
+		'dc:title'     => 'start watching',
+		'res'          => $stream[1],
 		'upnp:class'   => 'object.item.videoItem',
 		'protocolInfo' => 'http-get:*:*:*'
 	     );
@@ -103,4 +107,38 @@
 		, 'headers'=>$http_response_header
 		);
 	}
+    function showMoviesMenu(&$items, $page) {
+	preg_match_all("/.*<td valign='top'><a href='(.*)'>.*<img src='(.*)'.*<div class='tit'>.*<a href.*>(.*)<\/a>/sU",file_get_contents("http://www.cuevana.tv/peliculas/lista?page=$page"), $pelis, PREG_SET_ORDER);
+	preg_match("/<span class='pagination'>.*<a href='page=.*'>(.*)<\/a>.*<a class='next'/s",file_get_contents("http://www.cuevana.tv/peliculas/lista?page=$page"), $paginas);;
+	$max = $paginas[1];
+	if($page>1) {
+		$items[] = array(
+                                        'id'              => "umsp://plugins/cuevana?page=".($page-1),
+                                        'parentID'        => "umsp://plugins/cuevana?page=$page",
+                                        'dc:title'        => "<<-- pagina anterior",
+                                        'upnp:class'      => 'object.container',
+                                        'upnp:album_art'  => ""
+                                );
+	}
+	foreach($pelis as $peli) {
+		$chunks = split("/", $peli[1]);
+		$items[] = array(
+                                        'id'              => "umsp://plugins/cuevana?movie=".$chunks[2],
+                                        'parentID'        => "umsp://plugins/cuevana?page=$page",
+                                        'dc:title'        => $peli[3],
+                                        'upnp:class'      => 'object.container',
+                                        'upnp:album_art'  => $peli[2]
+                                );
+	
+	}
+	if($page<$max) {
+		$items[] = array(
+                                        'id'              => "umsp://plugins/cuevana?page=".($page+1),
+                                        'parentID'        => "umsp://plugins/cuevana?page=$page",
+                                        'dc:title'        => "pagina siguiente -->>",
+                                        'upnp:class'      => 'object.container',
+                                        'upnp:album_art'  => ""
+                                );
+	}
+    }
 ?>
