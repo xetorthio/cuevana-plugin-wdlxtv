@@ -115,7 +115,7 @@
 		$items[] = array(
                                         'id'              => "umsp://plugins/cuevana?page=".($page-1),
                                         'parentID'        => "umsp://plugins/cuevana?page=$page",
-                                        'dc:title'        => "<<-- pagina anterior",
+                                        'dc:title'        => "pagina anterior",
                                         'upnp:class'      => 'object.container',
                                         'upnp:album_art'  => ""
                                 );
@@ -135,7 +135,7 @@
 		$items[] = array(
                                         'id'              => "umsp://plugins/cuevana?page=".($page+1),
                                         'parentID'        => "umsp://plugins/cuevana?page=$page",
-                                        'dc:title'        => "pagina siguiente -->>",
+                                        'dc:title'        => "pagina siguiente",
                                         'upnp:class'      => 'object.container',
                                         'upnp:album_art'  => ""
                                 );
